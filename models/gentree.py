@@ -3,6 +3,8 @@
 
 # logic tree
 
+from typing import Dict, List
+
 
 class GenTree(object):
 
@@ -20,23 +22,25 @@ class GenTree(object):
         self.value = ''
         self.level = 0
         self.leaf_num = 0
-        self.parent = []
-        self.child = []
-        self.cover = {}
+        self.parents: List[GenTree] = []
+        self.children: List[GenTree] = []
+        self.cover: Dict[str, GenTree] = {}
+
         if value is not None:
             self.value = value
             self.cover[value] = self
-        if parent is not None:
-            self.parent = parent.parent[:]
-            self.parent.insert(0, parent)
-            parent.child.append(self)
-            self.level = parent.level + 1
-            for t in self.parent:
-                t.cover[self.value] = self
-                if isleaf:
-                    t.leaf_num += 1
 
-    def node(self, value):
+        if parent is not None:
+            self.parents = parent.parents[:]
+            self.parents.insert(0, parent)
+            parent.children.append(self)
+            self.level = parent.level + 1
+            for node in self.parents:
+                node.cover[self.value] = self
+                if isleaf:
+                    node.leaf_num += 1
+
+    def node(self, value: str):
         """Search tree with value, return GenTree node.
         return point to that node, or None if not exists
         """
