@@ -70,6 +70,10 @@ def choose_qid(partition: Partition) -> int:
     return qid_index
 
 
+# DATA_REQ
+#   - DIRECT for record in partition.members:
+#-----------------------------------------------------
+#    >> UNNECESSARY, IF the median can be calculated directly in the DB
 def get_frequency_set(partition: Partition, qid_index: int) -> dict[str, int]:
     """ Count the number of unique values in the dataset for the attribute with the specified index, and thus generate a frequency set    
     
@@ -88,6 +92,16 @@ def get_frequency_set(partition: Partition, qid_index: int) -> dict[str, int]:
     return frequency_set
 
 
+# DATA_REQ
+#   - direct processing through get_frequency_set()
+#       >> should find a way to calculate the median directly in the DB
+# ---------------------------------
+# - 50th percentile = median
+#
+# - unique_value_to_split_at: the median
+# - next_unique_value: 51th percentile (?)
+# - unique_values[0]: min
+# - unique_values[-1]: max
 def get_median(partition: Partition, qid_index: int) -> Tuple[str, str, str, str]:
     """ Find the middle of the partition
 
@@ -158,7 +172,11 @@ def split_numerical_value(numeric_value: str, value_to_split_at: int) -> Tuple[s
             r_range = value_to_split_at + ',' + max
         return l_range, r_range
 
-
+# DATA_REQ
+#   - direct processing through get_median()
+#   - direct for record in partition.members:
+#----------------------------------------------
+#    >> UNNECESSARY: only for further storing
 def split_numerical_attribute(partition: Partition, qid_index: int) -> list[Partition]:
     """ Split numeric attribute by along the median, creating two new sub-partitions """
 
@@ -169,7 +187,7 @@ def split_numerical_attribute(partition: Partition, qid_index: int) -> list[Part
     p_low = ATT_TREES[qid_index].dict[min_unique_value]
     p_high = ATT_TREES[qid_index].dict[max_unique_value]
 
-    # update middle
+    # This if-else seems unnecessary already handled in init and then in each iteration through the parts below of this function
     if min_unique_value == max_unique_value:
         partition.attribute_generalization_list[qid_index] = min_unique_value
     else:
@@ -214,6 +232,13 @@ def split_numerical_attribute(partition: Partition, qid_index: int) -> list[Part
 
     return sub_partitions
 
+# DATA_REQ
+#   - direct processing through "for record in partition.members"
+#       - see if the child nodes in the hierarchy cover all value AND if the all new partitions are greater than k
+#------------------------------------------------------------------------
+#   >> execute the queries with the refined attribute values
+#       - if for all new EC ec, refined along the current attribute, |ec| > k OR |EC| = 0: the attribute can be split
+#       - else the splitting along this attribute is not possble any more 
 def split_categorical_attribute(partition: Partition, qid_index: int) -> list[Partition]:
     """ Split categorical attribute using generalization hierarchy """
 
@@ -230,6 +255,7 @@ def split_categorical_attribute(partition: Partition, qid_index: int) -> list[Pa
     if len(sub_groups) == 0:        
         return []
     
+    # DATA_REQ >> MAP_TO_QUERY
     for record in partition.members:
         qid_value = record[qid_index]
         for i, node in enumerate(child_nodes):
@@ -262,7 +288,9 @@ def split_categorical_attribute(partition: Partition, qid_index: int) -> list[Pa
             new_attribute_width_list = partition.attribute_width_list[:]            
             new_attribute_generalization_list = partition.attribute_generalization_list[:]
 
+            # For categorical attributes, the width of the attribute equals the number of children
             new_attribute_width_list[qid_index] = len(child_nodes[i])
+            # The generalized value of the attribute is the node value
             new_attribute_generalization_list[qid_index] = child_nodes[i].value
 
             sub_partitions.append(Partition(sub_group, new_attribute_width_list, new_attribute_generalization_list, NUM_OF_QIDS_USED))
@@ -314,7 +342,8 @@ def check_splitable(partition: Partition):
         return False
     return True
 
-
+# DATA_REQ_EZ: number of qids 
+#   - number of qids through len(data[0]) - 1
 def init(att_trees: List[GenTree | NumRange], data, k: int, QI_num=-1):
     """ Reset all global variables """
 
@@ -342,6 +371,10 @@ def init(att_trees: List[GenTree | NumRange], data, k: int, QI_num=-1):
     QI_RANGE = []
 
 
+# DATA_REQ_EZ: number of qids 
+#   - pass to init
+#   - pass to whole_partition on initalization
+#   - number of records through -> len(data)
 def mondrian(att_trees: list[GenTree | NumRange], data: list[list[str]], k: int, QI_num=-1):
     """
     basic Mondrian for k-anonymity.
