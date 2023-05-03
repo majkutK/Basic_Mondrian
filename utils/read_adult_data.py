@@ -128,19 +128,18 @@ def read_tree():
     return attribute_tree
 
 
-def read_pickle_file(att_name):
-    """
-    read pickle file for numeric attributes
-    return numrange object
-    """
+def read_pickle_file(attribute_name: str) -> NumRange:
+    """ Read pickle file for numeric attributes """
+
     try:
-        static_file = open('data/adult_' + att_name + '_static.pickle', 'rb')
+        static_file = open('data/adult_' + attribute_name + '_static.pickle', 'rb')
         (unique_value_count_per_attr, sort_value) = pickle.load(static_file)
     except:
         print("Pickle file not exists!!")
+
     static_file.close()
-    result = NumRange(sort_value, unique_value_count_per_attr)
-    return result
+        
+    return NumRange(sort_value, unique_value_count_per_attr)
 
 
 def read_tree_file(treename):
