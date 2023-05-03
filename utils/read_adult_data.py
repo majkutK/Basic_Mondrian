@@ -138,39 +138,46 @@ def read_pickle_file(attribute_name: str) -> NumRange:
         print("Pickle file not exists!!")
 
     static_file.close()
-        
+
     return NumRange(sort_value, unique_value_count_per_attr)
 
 
-def read_tree_file(treename):
-    """read tree data from treename
-    """
-    leaf_to_path = {}
-    att_tree = {}
-    prefix = 'data/adult_'
-    postfix = ".txt"
-    treefile = open(prefix + treename + postfix, newline=None)
-    att_tree['*'] = GenTree('*')
+def read_tree_file(treename: str) -> dict[str, GenTree]:
+    """ Read the hierarchy tree from the descriptor file """
+    
+    attribute_tree = {}    
+    attribute_tree['*'] = GenTree('*')
+
+    treefile = open('data/adult_' + treename + '.txt', newline=None)
+
     if __DEBUG:
         print("Reading Tree" + treename)
+
     for line in treefile:
         # delete \n
         if len(line) <= 1:
             break
+        
         line = line.strip()
-        temp = line.split(';')
-        # copy temp
-        temp.reverse()
-        for i, t in enumerate(temp):
+        line_items = line.split(';')
+        # copy line_items
+        line_items.reverse()
+        
+        for i, item in enumerate(line_items):
             isleaf = False
-            if i == len(temp) - 1:
+
+            if i == len(line_items) - 1:
                 isleaf = True
+                
             # try and except is more efficient than 'in'
             try:
-                att_tree[t]
+                attribute_tree[item]
             except:
-                att_tree[t] = GenTree(t, att_tree[temp[i - 1]], isleaf)
+                attribute_tree[item] = GenTree(item, attribute_tree[line_items[i - 1]], isleaf)
+
     if __DEBUG:
-        print("Nodes No. = %d" % att_tree['*'].support)
+        print("Nodes No. = %d" % attribute_tree['*'].support)
+
     treefile.close()
-    return att_tree
+    
+    return attribute_tree
