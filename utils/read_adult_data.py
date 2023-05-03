@@ -26,33 +26,37 @@ from models.numrange import NumRange
 import pickle
 import pdb
 
-ATT_NAMES = ['age', 'workclass', 'final_weight', 'education',
+ATTRIBUTE_NAMES = ['age', 'workclass', 'final_weight', 'education',
              'education_num', 'marital_status', 'occupation', 'relationship',
              'race', 'sex', 'capital_gain', 'capital_loss', 'hours_per_week',
              'native_country', 'class']
 # 8 attributes are chose as QI attributes
 # age and education levels are treated as numeric attributes
 # only matrial_status and workclass has well defined generalization hierarchies, other categorical attributes only have 2-level generalization hierarchies.
-QI_INDEX = [0, 1, 4, 5, 6, 8, 9, 13]
+QID_INDICES = [0, 1, 4, 5, 6, 8, 9, 13]
 IS_CAT = [False, True, False, True, True, True, True, True]
-SA_INDEX = -1
+SENSITIVE_ATTR_INDEX = -1
 
 __DEBUG = False
 
 
 # Filter out the QIDs and the SA from the original data file
 def read_data() -> list[list[str]]:
-    """ Read microda for *.txt and return read data """
+    """ Read microda from adult.data, and
+            - filter out empty lines
+            - filter out lines with missing attribute values
+            - remove spaces
+            - split lines along commas into string arrays"""
     
     # The number of QIDs
-    QI_num = len(QI_INDEX)
+    num_of_qids = len(QID_INDICES)
     # Data with the QID and SA values only
-    data = []
-    numeric_dict = []
+    data: list[list[str]] = []
+    unique_value_count_per_attr: list[dict[int|str, int]] = []
 
-    # For all QID attribute, create a dedicated array in the numeric_dict array
-    for i in range(QI_num):
-        numeric_dict.append(dict())
+    # For all QID attribute, create a dedicated array in the unique_value_count_per_attr array
+    for i in range(num_of_qids):
+        unique_value_count_per_attr.append(dict())
 
     # other categorical attributes in intuitive order
     # here, we use the appear number
@@ -65,38 +69,41 @@ def read_data() -> list[list[str]]:
         # Remove empty and incomplete lines >> only 30162 records will be kept
         if len(line) == 0 or '?' in line:
             continue
+
         # Remove spaces from between attribute values
         line = line.replace(' ', '')
+
         # Split the line along commas, creating an array that stores the attribute values from the current line
-        temp = line.split(',')
+        line_items = line.split(',')
 
-        ltemp = []
+        # Project the original line into one containing only the QID and sensitive attribute values
+        projected_line_items: list[str] = []
 
-        for i in range(QI_num):
+        for i in range(num_of_qids):
             # Get the index of the current attribute in the original data (nth column it is located in)
-            index = QI_INDEX[i]
+            qid_index = QID_INDICES[i]
 
             # Store how many times each unique value of numerical attributes show up
             if IS_CAT[i] is False:
                 try:
-                    numeric_dict[i][temp[index]] += 1
+                    unique_value_count_per_attr[i][line_items[qid_index]] += 1
                 except KeyError:
-                    numeric_dict[i][temp[index]] = 1
-                    # Copy each attribute value of the line from the temp array to the ltemp array
-            ltemp.append(temp[index])
+                    unique_value_count_per_attr[i][line_items[qid_index]] = 1
+                    # Copy each attribute value of the line from the temp array to the projected_line_items array
+            projected_line_items.append(line_items[qid_index])
 
-        # Add the sensitive attribute value to the ltemp array
-        ltemp.append(temp[SA_INDEX])
-        data.append(ltemp)
+        # Add the sensitive attribute value to the projected_line_items array
+        projected_line_items.append(line_items[SENSITIVE_ATTR_INDEX])
+        data.append(projected_line_items)
 
     # Write the information gathered about the various numeric attributes values into a new file, through the serialization library named pickle
     # Parsing happens through read_pickle_file
-    for i in range(QI_num):
+    for i in range(num_of_qids):
         if IS_CAT[i] is False:
-            static_file = open('data/adult_' + ATT_NAMES[QI_INDEX[i]] + '_static.pickle', 'wb')
-            sort_value = list(numeric_dict[i].keys())
+            static_file = open('data/adult_' + ATTRIBUTE_NAMES[QID_INDICES[i]] + '_static.pickle', 'wb')
+            sort_value = list(unique_value_count_per_attr[i].keys())
             sort_value.sort(key=lambda x: int(x))
-            pickle.dump((numeric_dict[i], sort_value), static_file)
+            pickle.dump((unique_value_count_per_attr[i], sort_value), static_file)
             static_file.close()
 
     return data
@@ -107,8 +114,8 @@ def read_tree():
     """
     att_names = []
     att_trees = []
-    for t in QI_INDEX:
-        att_names.append(ATT_NAMES[t])
+    for t in QID_INDICES:
+        att_names.append(ATTRIBUTE_NAMES[t])
     for i in range(len(att_names)):
         if IS_CAT[i]:
             att_trees.append(read_tree_file(att_names[i]))
@@ -124,11 +131,11 @@ def read_pickle_file(att_name):
     """
     try:
         static_file = open('data/adult_' + att_name + '_static.pickle', 'rb')
-        (numeric_dict, sort_value) = pickle.load(static_file)
+        (unique_value_count_per_attr, sort_value) = pickle.load(static_file)
     except:
         print("Pickle file not exists!!")
     static_file.close()
-    result = NumRange(sort_value, numeric_dict)
+    result = NumRange(sort_value, unique_value_count_per_attr)
     return result
 
 
