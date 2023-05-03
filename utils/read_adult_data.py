@@ -110,18 +110,22 @@ def read_data() -> list[list[str]]:
 
 
 def read_tree():
-    """read tree from data/tree_*.txt, store them in att_tree
-    """
-    att_names = []
-    att_trees = []
-    for t in QID_INDICES:
-        att_names.append(ATTRIBUTE_NAMES[t])
-    for i in range(len(att_names)):
+    """read tree from data/tree_*.txt, store them in att_tree"""
+    
+    qid_attribute_names: list[str] = []
+    attribute_tree: list[NumRange|dict[str, GenTree]] = []
+
+    # Project the array containing all attribute names into one that contains only the ones that are QIDs
+    for qid_index in QID_INDICES:
+        qid_attribute_names.append(ATTRIBUTE_NAMES[qid_index])
+
+    for i in range(len(qid_attribute_names)):
         if IS_CAT[i]:
-            att_trees.append(read_tree_file(att_names[i]))
+            attribute_tree.append(read_tree_file(qid_attribute_names[i]))
         else:
-            att_trees.append(read_pickle_file(att_names[i]))
-    return att_trees
+            attribute_tree.append(read_pickle_file(qid_attribute_names[i]))
+
+    return attribute_tree
 
 
 def read_pickle_file(att_name):
