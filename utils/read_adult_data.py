@@ -70,11 +70,8 @@ def read_data() -> list[list[str]]:
         if len(line) == 0 or '?' in line:
             continue
 
-        # Remove spaces from between attribute values
-        line = line.replace(' ', '')
-
-        # Split the line along commas, creating an array that stores the attribute values from the current line
-        line_items = line.split(',')
+        # Remove spaces from between attribute values, then split the line along commas, creating an array that stores the attribute values from the current line
+        line_items = line.replace(' ', '').split(',')
 
         # Project the original line into one containing only the QID and sensitive attribute values
         projected_line_items: list[str] = []
@@ -100,11 +97,11 @@ def read_data() -> list[list[str]]:
     # Parsing happens through read_pickle_file
     for i in range(num_of_qids):
         if IS_CAT[i] is False:
-            static_file = open('data/adult_' + ATTRIBUTE_NAMES[QID_INDICES[i]] + '_static.pickle', 'wb')
+            pickle_file = open('data/adult_' + ATTRIBUTE_NAMES[QID_INDICES[i]] + '_static.pickle', 'wb')
             sort_value = list(unique_value_count_per_attr[i].keys())
             sort_value.sort(key=lambda x: int(x))
-            pickle.dump((unique_value_count_per_attr[i], sort_value), static_file)
-            static_file.close()
+            pickle.dump((unique_value_count_per_attr[i], sort_value), pickle_file)
+            pickle_file.close()
 
     return data
 
@@ -132,12 +129,12 @@ def read_pickle_file(attribute_name: str) -> NumRange:
     """ Read pickle file for numeric attributes """
 
     try:
-        static_file = open('data/adult_' + attribute_name + '_static.pickle', 'rb')
-        (unique_value_count_per_attr, sort_value) = pickle.load(static_file)
+        pickle_file = open('data/adult_' + attribute_name + '_static.pickle', 'rb')
+        (unique_value_count_per_attr, sort_value) = pickle.load(pickle_file)
     except:
         print("Pickle file not exists!!")
 
-    static_file.close()
+    pickle_file.close()
 
     return NumRange(sort_value, unique_value_count_per_attr)
 
@@ -148,18 +145,17 @@ def read_tree_file(treename: str) -> dict[str, GenTree]:
     attribute_tree = {}    
     attribute_tree['*'] = GenTree('*')
 
-    treefile = open('data/adult_' + treename + '.txt', newline=None)
+    tree_file = open('data/adult_' + treename + '.txt', newline=None)
 
     if __DEBUG:
         print("Reading Tree" + treename)
 
-    for line in treefile:
+    for line in tree_file:
         # delete \n
         if len(line) <= 1:
             break
-        
-        line = line.strip()
-        line_items = line.split(';')
+                
+        line_items = line.strip().split(';')
         # copy line_items
         line_items.reverse()
         
@@ -178,6 +174,6 @@ def read_tree_file(treename: str) -> dict[str, GenTree]:
     if __DEBUG:
         print("Nodes No. = %d" % attribute_tree['*'].support)
 
-    treefile.close()
-    
+    tree_file.close()
+
     return attribute_tree
